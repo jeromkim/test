@@ -1,0 +1,53 @@
+graph TB
+    %% External Systems
+    Portal[MIDAS Portal] --> |JWT Token| Auth[JWT Authentication]
+    
+    %% Frontend Layer
+    subgraph "Frontend (Streamlit)"
+        App[app.py]
+        Pages[pages/chat.py]
+        Utils[utils/request.py]
+        
+        App --> |Token Verification| Auth
+        App --> |Navigation| Pages
+        Pages --> |API Calls| Utils
+    end
+    
+    %% Backend Layer  
+    subgraph "Backend (FastAPI)"
+        Main[main.py]
+        AuthRouter[src/auth.py]
+        ChatController[src/adapters/chat_controller.py]
+        ChatService[src/services/chat_service.py]
+        HistoryService[src/services/history_service.py]
+        KnowledgeSearch[src/tools/retrieve_knowledge_search.py]
+        Config[src/config.py]
+        Models[src/utils/models.py]
+        Logger[src/utils/logger.py]
+        
+        Main --> |Include Router| AuthRouter
+        Main --> |Handle Requests| ChatController
+        ChatController --> |Business Logic| ChatService
+        ChatController --> |History Management| HistoryService
+        ChatService --> |Knowledge Retrieval| KnowledgeSearch
+        ChatService --> |System Prompts| Prompts[src/prompts/chat.py]
+    end
+    
+    %% AWS Services
+    subgraph "AWS Services"
+        Bedrock[Amazon Bedrock]
+        SecretsManager[AWS Secrets Manager]
+        DynamoDB[Amazon DynamoDB]
+        KnowledgeBase[Bedrock Knowledge Base]
+        Guardrail[Bedrock Guardrail]
+        
+        ChatService --> |LLM Calls| Bedrock
+        AuthRouter --> |JWT Secret| SecretsManager
+        HistoryService --> |Chat History| DynamoDB
+        KnowledgeSearch --> |Document Search| KnowledgeBase
+        Main --> |Content Filter| Guardrail
+    end
+    
+    %% Data Flow
+    Utils --> |HTTP Requests| Main
+    Auth --> |Token Validation| AuthRouter
